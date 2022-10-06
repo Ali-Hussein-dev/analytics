@@ -2,6 +2,10 @@ defmodule PlausibleWeb.Router do
   use PlausibleWeb, :router
   @two_weeks_in_seconds 60 * 60 * 24 * 14
 
+  pipeline :tracing do
+    plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  end
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug PlausibleWeb.Firewall
@@ -60,7 +64,7 @@ defmodule PlausibleWeb.Router do
   end
 
   scope "/api/stats", PlausibleWeb.Api do
-    pipe_through :internal_stats_api
+    pipe_through [:internal_stats_api, :tracing]
 
     get "/:domain/current-visitors", StatsController, :current_visitors
     get "/:domain/main-graph", StatsController, :main_graph
@@ -89,7 +93,7 @@ defmodule PlausibleWeb.Router do
   end
 
   scope "/api/v1/stats", PlausibleWeb.Api do
-    pipe_through [:public_api, PlausibleWeb.AuthorizeStatsApiPlug]
+    pipe_through [:public_api, PlausibleWeb.AuthorizeStatsApiPlug, :tracing]
 
     get "/realtime/visitors", ExternalStatsController, :realtime_visitors
     get "/aggregate", ExternalStatsController, :aggregate
@@ -98,7 +102,7 @@ defmodule PlausibleWeb.Router do
   end
 
   scope "/api/v1/sites", PlausibleWeb.Api do
-    pipe_through [:public_api, PlausibleWeb.AuthorizeSitesApiPlug]
+    pipe_through [:public_api, PlausibleWeb.AuthorizeSitesApiPlug, :tracing]
 
     post "/", ExternalSitesController, :create_site
     get "/:site_id", ExternalSitesController, :get_site
